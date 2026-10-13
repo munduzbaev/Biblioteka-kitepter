@@ -2,7 +2,8 @@
 window.API_URL =
   ["localhost", "127.0.0.1", ""].includes(location.hostname)
     ? "http://localhost:8000"
-    : "https://a-book-edu-api.vercel.app/";
+    : "https://a-book-edu-api.vercel.app";
+window.API_URL = window.API_URL.replace(/\/+$/, "");   // лишний «/» на конце ломает запросы (Vercel отвечает редиректом без CORS)
 
 // Вход читателей — Supabase Auth. Адрес проекта и публичный (anon / publishable) ключ:
 // Supabase -> Project Settings -> API. Этот ключ публичный по замыслу, его можно держать в коде.
