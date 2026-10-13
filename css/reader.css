@@ -1,0 +1,64 @@
+:root {
+  --rbg: #2b2d31; --rbar: #1e1f22; --rtext: #ececec; --rmuted: #a0a3a8; --raccent: #748ffc; --rborder: #3a3c42;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body.reader {
+  display: flex; flex-direction: column; background: var(--rbg); color: var(--rtext);
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden;
+}
+
+/* панели */
+.rbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--rbar); border-bottom: 1px solid var(--rborder); }
+.rbar--bottom { border-bottom: 0; border-top: 1px solid var(--rborder); justify-content: center; }
+.rtitle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rtitle strong, .rtitle span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rtitle span { font-size: .8rem; color: var(--rmuted); }
+.rbtn {
+  min-width: 40px; height: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  color: var(--rtext); background: transparent; border: 1px solid var(--rborder); border-radius: 8px;
+  font: inherit; text-decoration: none; cursor: pointer;
+}
+.rbtn:hover:not(:disabled) { border-color: var(--raccent); }
+.rbtn[aria-pressed="true"] { background: var(--raccent); color: #11131a; border-color: var(--raccent); }
+.rbtn:focus-visible, input:focus-visible { outline: 2px solid var(--raccent); outline-offset: 2px; }
+.rpage { display: flex; align-items: center; gap: 6px; color: var(--rmuted); }
+.rpage input, .rsearch input {
+  width: 64px; height: 38px; padding: 0 8px; text-align: center; color: var(--rtext);
+  background: var(--rbg); border: 1px solid var(--rborder); border-radius: 8px; font: inherit;
+}
+.rspacer { flex: 1; max-width: 80px; }
+.rzoomval { min-width: 48px; text-align: center; color: var(--rmuted); font-variant-numeric: tabular-nums; }
+
+/* сцена с книгой */
+.rstage { position: relative; flex: 1; display: flex; overflow: auto; padding: 16px; min-height: 0; }
+.rzoomer { margin: auto; flex: none; }
+#book { width: 100%; height: 100%; }
+.rpagebox { background: #fff; overflow: hidden; }
+.rpagebox canvas { display: block; width: 100%; height: 100%; }
+.rpagebox[data-density="hard"] { box-shadow: inset 0 0 0 1px #0002; }
+.rloading { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 24px; color: var(--rmuted); background: var(--rbg); }
+.rloading[hidden] { display: none; }
+.rloading a { color: var(--raccent); }
+
+/* поиск */
+.rsearch {
+  position: absolute; z-index: 5; top: 58px; right: 12px; width: min(380px, calc(100% - 24px)); max-height: 60vh;
+  display: flex; flex-direction: column; background: var(--rbar); border: 1px solid var(--rborder); border-radius: 12px; padding: 12px;
+  box-shadow: 0 8px 30px #0008;
+}
+.rsearch[hidden] { display: none; }
+.rsearch form { display: flex; gap: 6px; }
+.rsearch input { flex: 1; width: auto; text-align: left; }
+.rsearch__status { margin: 8px 2px 4px; font-size: .85rem; color: var(--rmuted); }
+.rsearch__list { list-style: none; margin: 0; padding: 0; overflow: auto; }
+.rsearch__list button {
+  width: 100%; text-align: left; padding: 8px; color: var(--rtext); background: transparent; border: 0; border-radius: 6px; font: inherit; cursor: pointer;
+}
+.rsearch__list button:hover, .rsearch__list button:focus-visible { background: var(--rborder); }
+.rsearch__list b { color: var(--raccent); margin-right: 6px; }
+.rsearch__list mark { background: #f5b53d55; color: inherit; border-radius: 2px; }
+
+@media (max-width: 700px) { .hide-sm { display: none; } .rspacer { display: none; } .rbar { padding: 6px 8px; } }
+/* печать из читалки отключена, как и скачивание */
+@media print { body.reader { display: none; } }

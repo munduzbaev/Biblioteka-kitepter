@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Читать книгу — Электронная библиотека</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📖%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/reader.css">
+</head>
+<body class="reader">
+  <header class="rbar">
+    <a class="rbtn" id="back" href="./" title="К каталогу">←<span class="hide-sm"> Каталог</span></a>
+    <div class="rtitle"><strong id="rTitle">Загрузка…</strong><span id="rAuthor"></span></div>
+    <button class="rbtn" id="searchBtn" type="button" title="Поиск по тексту" aria-label="Поиск по тексту">🔍</button>
+    <button class="rbtn" id="soundBtn" type="button" title="Звук перелистывания" aria-label="Звук перелистывания" aria-pressed="false">🔇</button>
+    <button class="rbtn" id="fsBtn" type="button" title="Во весь экран (F)" aria-label="Во весь экран">⛶</button>
+  </header>
+
+  <aside class="rsearch" id="searchPanel" hidden>
+    <form id="searchForm">
+      <input id="searchInput" type="search" placeholder="Найти в книге…" autocomplete="off" aria-label="Поиск по тексту книги">
+      <button class="rbtn" type="submit">Искать</button>
+      <button class="rbtn" type="button" id="searchClose" aria-label="Закрыть поиск">✕</button>
+    </form>
+    <p class="rsearch__status" id="searchStatus" aria-live="polite"></p>
+    <ul class="rsearch__list" id="searchResults"></ul>
+  </aside>
+
+  <main class="rstage" id="stage">
+    <div class="rzoomer" id="zoomer"><div id="book"></div></div>
+    <div class="rloading" id="loading" role="status">Загрузка книги…</div>
+  </main>
+
+  <footer class="rbar rbar--bottom">
+    <button class="rbtn" id="prev" type="button" aria-label="Предыдущая страница">◀</button>
+    <label class="rpage">
+      <input id="pageInput" type="number" min="1" value="1" aria-label="Номер страницы"> / <span id="pageTotal">–</span>
+    </label>
+    <button class="rbtn" id="next" type="button" aria-label="Следующая страница">▶</button>
+    <span class="rspacer"></span>
+    <button class="rbtn" id="zoomOut" type="button" title="Уменьшить (−)" aria-label="Уменьшить">−</button>
+    <span class="rzoomval" id="zoomVal">100%</span>
+    <button class="rbtn" id="zoomIn" type="button" title="Увеличить (+)" aria-label="Увеличить">+</button>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/page-flip.browser.js"></script>
+  <script src="js/reader.js"></script>
+</body>
+</html>

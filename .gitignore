@@ -1,0 +1,11 @@
+# зависимости тестов
+node_modules/
+
+# результаты тестов и локальные файлы
+test-results/
+playwright-report/
+.env
+.env.*
+
+# Vercel
+.vercel/
