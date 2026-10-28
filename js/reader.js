@@ -9,7 +9,8 @@ const KEEP_AHEAD = 4, KEEP_BEHIND = 3;   // сколько страниц вок
 const MAX_CANVAS_PX = 2400;
 const SEARCH_LIMIT = 200;
 
-const state = { pdf: null, flip: null, total: 0, ratio: 0.7, zoom: 1, page: 0, sound: false };
+// text — книга EPUB или TXT: страницы готовы заранее (TextBook), рендерить ничего не нужно
+const state = { pdf: null, text: false, flip: null, total: 0, ratio: 0.7, zoom: 1, page: 0, sound: false };
 const canvases = [];              // canvas каждой страницы (индекс с 0)
 const renderedAt = new Map();     // индекс -> ширина в px, при которой страница отрендерена
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -33,11 +34,12 @@ async function loadMeta() {
   $("rAuthor").textContent = book.author;
   document.title = `${book.title} — читать`;
   if (!book.has_file) throw new Error("Для этой книги файл ещё не загружен");
+  return book;
 }
 
 class LoginRequired extends Error {}
 
-// Ссылку на PDF выдаёт API только вошедшему читателю (временная подписанная ссылка Supabase Storage)
+// Ссылку на файл выдаёт API только вошедшему читателю (временная подписанная ссылка Supabase Storage)
 async function fileUrl() {
   const session = await Auth.validSession();
   if (!session) throw new LoginRequired();
@@ -45,16 +47,27 @@ async function fileUrl() {
   if (res.status === 401) { Auth.clear(); throw new LoginRequired(); }
   if (res.status === 404) throw new Error("Для этой книги файл ещё не загружен");
   if (!res.ok) throw new Error("Не удалось получить файл книги. Попробуйте позже.");
-  return (await res.json()).url;
+  const data = await res.json();
+  return { url: data.url, format: data.format || "pdf" };
 }
 
 async function openPdf(url) {
+  // isEvalSupported: false — защита от вредоносных шрифтов в PDF (CVE-2024-4367 в PDF.js 3.x)
   try {
-    return await pdfjsLib.getDocument({ url }).promise;
+    return await pdfjsLib.getDocument({ url, isEvalSupported: false }).promise;
   } catch (first) {
     // запасной вариант: если хранилище не принимает Range-запросы, качаем файл целиком
-    return await pdfjsLib.getDocument({ url, disableRange: true, disableStream: true }).promise;
+    return await pdfjsLib.getDocument({ url, isEvalSupported: false, disableRange: true, disableStream: true }).promise;
   }
+}
+
+// EPUB и TXT: качаем файл целиком, разбираем и раскладываем по страницам заранее
+async function openText(url, format, book) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("download");
+  const parsed = await TextBook.open(new Uint8Array(await res.arrayBuffer()), format);
+  const progress = (share) => { $("loading").textContent = `Подготовка страниц… ${Math.round(share * 100)}%`; };
+  return TextBook.paginate(parsed, book, progress);
 }
 
 // ---------- размеры ----------
@@ -79,6 +92,8 @@ function applySize() {
   const zoomer = $("zoomer");
   zoomer.style.width = `${w * state.zoom}px`;
   zoomer.style.height = `${h * state.zoom}px`;
+  // текстовая страница свёрстана в логическом размере и масштабируется целиком
+  $("book").style.setProperty("--tscale", (baseSize().pageW * state.zoom) / TextBook.PAGE_W);
   state.flip?.update();
   $("zoomVal").textContent = `${Math.round(state.zoom * 100)}%`;
   $("zoomOut").disabled = state.zoom <= ZOOM_MIN;
@@ -105,6 +120,7 @@ async function renderPage(index) {
 }
 
 function renderAround(index) {
+  if (state.text) return;
   const from = Math.max(0, index - KEEP_BEHIND), to = Math.min(state.total - 1, index + KEEP_AHEAD);
   for (let i = from; i <= to; i++) renderPage(i).catch(() => renderedAt.delete(i));
   for (const i of [...renderedAt.keys()]) {        // освобождаем память далёких страниц
@@ -201,8 +217,14 @@ function bindUi() {
     try { localStorage.setItem("reader-sound", state.sound ? "1" : "0"); } catch { /* ignore */ }
   };
 
-  const panel = $("searchPanel");
-  $("searchBtn").onclick = () => { panel.hidden = !panel.hidden; if (!panel.hidden) $("searchInput").focus(); };
+  const panel = $("searchPanel"), tocPanel = $("tocPanel");
+  $("searchBtn").onclick = () => { tocPanel.hidden = true; panel.hidden = !panel.hidden; if (!panel.hidden) $("searchInput").focus(); };
+  $("tocBtn").onclick = () => { panel.hidden = true; tocPanel.hidden = !tocPanel.hidden; };
+  $("tocClose").onclick = () => { tocPanel.hidden = true; };
+  $("tocList").onclick = (e) => {
+    const btn = e.target.closest("[data-page]");
+    if (btn) { goTo(+btn.dataset.page); if (innerWidth < 700) tocPanel.hidden = true; }
+  };
   $("searchClose").onclick = () => { panel.hidden = true; };
   $("searchForm").onsubmit = (e) => { e.preventDefault(); search($("searchInput").value); };
   $("searchResults").onclick = (e) => {
@@ -215,7 +237,7 @@ function bindUi() {
     const keys = {
       ArrowRight: () => state.flip.flipNext(), ArrowLeft: () => state.flip.flipPrev(),
       "+": () => $("zoomIn").click(), "=": () => $("zoomIn").click(), "-": () => $("zoomOut").click(),
-      f: () => $("fsBtn").click(), F: () => $("fsBtn").click(), Escape: () => { panel.hidden = true; },
+      f: () => $("fsBtn").click(), F: () => $("fsBtn").click(), Escape: () => { panel.hidden = true; tocPanel.hidden = true; },
     };
     keys[e.key]?.();
   });
@@ -243,31 +265,51 @@ async function main() {
   $("soundBtn").setAttribute("aria-pressed", state.sound);
 
   if (!(await Auth.validSession())) return goLogin();   // читать могут только вошедшие
+  let layout = null;
   try {
-    await loadMeta();
-    state.pdf = await openPdf(await fileUrl());
+    const meta = await loadMeta();
+    const file = await fileUrl();
+    if (file.format === "pdf") state.pdf = await openPdf(file.url);
+    else layout = await openText(file.url, file.format, meta);
   } catch (err) {
     if (err instanceof LoginRequired) return goLogin();
     return fail(err.message.startsWith("Книга") || err.message.startsWith("Для") || err.message.startsWith("Не удалось получить")
       ? err.message : "Не удалось открыть файл книги. Попробуйте позже.");
   }
 
-  state.total = state.pdf.numPages;
+  const book = $("book");
+  if (layout) {
+    state.text = true;
+    state.total = layout.pages.length;
+    state.ratio = TextBook.PAGE_W / TextBook.PAGE_H;
+    pageTexts = layout.texts;   // поиск идёт по готовому тексту страниц
+    for (const page of layout.pages) {
+      const box = document.createElement("div");
+      box.className = "rpagebox rpagebox--text";
+      box.append(page);
+      book.append(box);
+    }
+    if (layout.toc.length > 1) {
+      $("tocBtn").hidden = false;
+      $("tocList").innerHTML = layout.toc.map((t) =>
+        `<li><button type="button" data-page="${t.page}"><b>${t.page + 1}</b>${esc(t.title)}</button></li>`).join("");
+    }
+  } else {
+    state.total = state.pdf.numPages;
+    const first = await state.pdf.getPage(1), v = first.getViewport({ scale: 1 });
+    state.ratio = v.width / v.height;
+    for (let i = 0; i < state.total; i++) {
+      const box = document.createElement("div");
+      box.className = "rpagebox";
+      if (i === 0 || i === state.total - 1) box.dataset.density = "hard";   // твёрдая обложка
+      const canvas = document.createElement("canvas");
+      canvases.push(canvas);
+      box.append(canvas);
+      book.append(box);
+    }
+  }
   $("pageTotal").textContent = state.total;
   $("pageInput").max = state.total;
-  const first = await state.pdf.getPage(1), v = first.getViewport({ scale: 1 });
-  state.ratio = v.width / v.height;
-
-  const book = $("book");
-  for (let i = 0; i < state.total; i++) {
-    const box = document.createElement("div");
-    box.className = "rpagebox";
-    if (i === 0 || i === state.total - 1) box.dataset.density = "hard";   // твёрдая обложка
-    const canvas = document.createElement("canvas");
-    canvases.push(canvas);
-    box.append(canvas);
-    book.append(box);
-  }
 
   const { w, h, pageW } = baseSize();
   $("zoomer").style.width = `${w}px`;

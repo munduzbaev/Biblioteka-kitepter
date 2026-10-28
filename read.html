@@ -11,6 +11,7 @@
   <header class="rbar">
     <a class="rbtn" id="back" href="./" title="К каталогу">←<span class="hide-sm"> Каталог</span></a>
     <div class="rtitle"><strong id="rTitle">Загрузка…</strong><span id="rAuthor"></span></div>
+    <button class="rbtn" id="tocBtn" type="button" title="Оглавление" aria-label="Оглавление" hidden>☰</button>
     <button class="rbtn" id="searchBtn" type="button" title="Поиск по тексту" aria-label="Поиск по тексту">🔍</button>
     <button class="rbtn" id="soundBtn" type="button" title="Звук перелистывания" aria-label="Звук перелистывания" aria-pressed="false">🔇</button>
     <button class="rbtn" id="fsBtn" type="button" title="Во весь экран (F)" aria-label="Во весь экран">⛶</button>
@@ -24,6 +25,12 @@
     </form>
     <p class="rsearch__status" id="searchStatus" aria-live="polite"></p>
     <ul class="rsearch__list" id="searchResults"></ul>
+  </aside>
+
+  <aside class="rsearch" id="tocPanel" hidden>
+    <div class="rsearch__head"><strong>Оглавление</strong>
+      <button class="rbtn" type="button" id="tocClose" aria-label="Закрыть оглавление">✕</button></div>
+    <ul class="rsearch__list" id="tocList"></ul>
   </aside>
 
   <main class="rstage" id="stage">
@@ -47,6 +54,8 @@
   <script src="js/auth.js"></script>
   <script src="vendor/pdf.min.js"></script>
   <script src="vendor/page-flip.browser.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+  <script src="js/textbook.js"></script>
   <script src="js/reader.js"></script>
 </body>
 </html>

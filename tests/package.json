@@ -5,7 +5,7 @@
   "description": "Браузерные тесты сайта (Playwright). Только для разработки: на Vercel не попадают.",
   "scripts": {
     "install-browser": "playwright install chromium",
-    "test": "node catalog.test.mjs && node reader.test.mjs && node auth.test.mjs"
+    "test": "node catalog.test.mjs && node reader.test.mjs && node auth.test.mjs && node ebook.test.mjs"
   },
   "devDependencies": {
     "playwright": "~1.63.0"

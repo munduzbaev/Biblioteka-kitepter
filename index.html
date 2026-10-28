@@ -24,11 +24,18 @@
   <main class="container">
     <section class="hero">
       <h1>Найдите свою следующую книгу</h1>
-      <p>Поиск по названию, автору и описанию. Сортировка и фильтры — по жанру, языку, году и рейтингу.</p>
+      <p>Поиск по названию, автору и описанию. Категории, новинки, популярное, фильтры по жанру и языку.</p>
       <form class="search" id="searchForm" role="search">
         <input id="search" type="search" placeholder="Например: Толстой, Python, космос…" autocomplete="off" aria-label="Поиск книг">
       </form>
     </section>
+
+    <section class="shelf" id="newShelf" aria-labelledby="newTitle" hidden>
+      <h2 id="newTitle">Новинки</h2>
+      <div class="shelf__row" id="newList"></div>
+    </section>
+
+    <nav class="chips" id="categories" aria-label="Категории" hidden></nav>
 
     <section class="toolbar" aria-label="Фильтры и сортировка">
       <label>Жанр
@@ -44,6 +51,8 @@
           <option value="year">По году</option>
           <option value="rating">По рейтингу</option>
           <option value="pages">По объёму</option>
+          <option value="new">Сначала новые</option>
+          <option value="views">Популярные</option>
         </select>
       </label>
       <button class="btn" id="order" type="button" title="Направление сортировки">↑ А→Я</button>
